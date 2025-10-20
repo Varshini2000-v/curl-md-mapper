@@ -57,6 +57,19 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
+        code: {
+          bg: "hsl(var(--code-bg))",
+          string: "hsl(var(--code-string))",
+          number: "hsl(var(--code-number))",
+          keyword: "hsl(var(--code-keyword))",
+          comment: "hsl(var(--code-comment))",
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['Fira Code', 'monospace'],
       },
       borderRadius: {
         lg: "var(--radius)",
