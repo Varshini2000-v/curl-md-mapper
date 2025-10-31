@@ -1,24 +1,4 @@
-import { CurlCommand, ParsedField, ApiMapping } from '@/types/api';
-
-export function parseApiMappings(content: string): ApiMapping[] | null {
-  try {
-    // Try to extract JSON from markdown code blocks
-    const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-    const jsonString = codeBlockMatch ? codeBlockMatch[1].trim() : content.trim();
-    
-    const parsed = JSON.parse(jsonString);
-    
-    // If it's an array, assume it's the API mappings array
-    if (Array.isArray(parsed)) {
-      return parsed as ApiMapping[];
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error parsing API mappings:', error);
-    return null;
-  }
-}
+import { CurlCommand, ParsedField } from '@/types/api';
 
 export function parseCurlCommand(curlString: string): CurlCommand | null {
   try {
