@@ -28,3 +28,16 @@ export interface CurlCommand {
   headers: Record<string, string>;
   body?: any;
 }
+
+export interface FieldMapping {
+  type: string;
+  source: string;
+  field: string;
+}
+
+export interface ApiMapping {
+  apiName: string;
+  endpoint: string;
+  headers?: Record<string, string>;
+  mappings: Record<string, FieldMapping>;
+}

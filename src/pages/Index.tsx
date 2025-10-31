@@ -7,14 +7,16 @@ import { FileUploadArea } from '@/components/FileUploadArea';
 import { CurlPasteArea } from '@/components/CurlPasteArea';
 import { FieldsTable } from '@/components/FieldsTable';
 import { ResponseDisplay } from '@/components/ResponseDisplay';
-import { UploadedFile, ParsedField, ApiResponse } from '@/types/api';
-import { parseCurlCommand, extractFields } from '@/utils/curlParser';
+import { PayloadMapper } from '@/components/PayloadMapper';
+import { UploadedFile, ParsedField, ApiResponse, ApiMapping } from '@/types/api';
+import { parseCurlCommand, extractFields, parseApiMappings } from '@/utils/curlParser';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fields, setFields] = useState<ParsedField[]>([]);
+  const [apiMappings, setApiMappings] = useState<ApiMapping[]>([]);
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -50,11 +52,36 @@ const Index = () => {
     setSelectedFile(fileId);
     const file = files.find((f) => f.id === fileId);
     if (file) {
-      // Try to parse as curl command
+      // First try to parse as API mappings array
+      const mappings = parseApiMappings(file.content);
+      if (mappings) {
+        setApiMappings(mappings);
+        setFields([]);
+        toast({
+          title: 'API Mappings loaded',
+          description: `Found ${mappings.length} API configuration(s)`,
+        });
+        return;
+      }
+
+      // Fallback: Try to parse as curl command
       const parsed = parseCurlCommand(file.content);
       if (parsed) {
         const extractedFields = extractFields(parsed);
         setFields(extractedFields);
+        setApiMappings([]);
+        toast({
+          title: 'Curl command parsed',
+          description: `Extracted ${extractedFields.length} fields`,
+        });
+      } else {
+        setFields([]);
+        setApiMappings([]);
+        toast({
+          title: 'Parse error',
+          description: 'Could not parse file content',
+          variant: 'destructive',
+        });
       }
     }
   };
@@ -150,21 +177,28 @@ const Index = () => {
             </TabsContent>
           </Tabs>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Extracted Fields</h2>
-              <Button
-                onClick={handleRunApi}
-                disabled={fields.length === 0 || isLoading}
-                size="sm"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Run API Call
-              </Button>
+          {apiMappings.length > 0 ? (
+            <div className="space-y-4">
+              <h2 className="text-lg font-semibold">Payload Mapper</h2>
+              <PayloadMapper apiMappings={apiMappings} />
             </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Extracted Fields</h2>
+                <Button
+                  onClick={handleRunApi}
+                  disabled={fields.length === 0 || isLoading}
+                  size="sm"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Run API Call
+                </Button>
+              </div>
 
-            <FieldsTable fields={fields} onFieldChange={handleFieldChange} />
-          </div>
+              <FieldsTable fields={fields} onFieldChange={handleFieldChange} />
+            </div>
+          )}
 
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Response</h2>
