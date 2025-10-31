@@ -2,37 +2,54 @@ import { CurlCommand, ParsedField } from '@/types/api';
 
 export function parseCurlCommand(curlString: string): CurlCommand | null {
   try {
-    // Remove 'curl' and extra whitespace
-    let cleaned = curlString.trim().replace(/^curl\s+/i, '');
+    // Remove extra whitespace and newlines
+    let cleaned = curlString.trim().replace(/\\\s*\n\s*/g, ' ').replace(/\s+/g, ' ');
     
-    // Extract URL
-    const urlMatch = cleaned.match(/(['"]?)https?:\/\/[^\s'"]+\1/);
-    if (!urlMatch) return null;
+    // Remove 'curl' keyword
+    cleaned = cleaned.replace(/^curl\s+/i, '');
     
-    const url = urlMatch[0].replace(/['"]/g, '');
-    
-    // Extract method
-    const methodMatch = cleaned.match(/-X\s+(\w+)/i);
-    const method = methodMatch ? methodMatch[1].toUpperCase() : 'GET';
-    
-    // Extract headers
-    const headers: Record<string, string> = {};
-    const headerMatches = cleaned.matchAll(/-H\s+['"]([^:]+):\s*([^'"]+)['"]/gi);
-    for (const match of headerMatches) {
-      headers[match[1].trim()] = match[2].trim();
+    // Extract URL - handle both quoted and unquoted URLs
+    const urlMatch = cleaned.match(/(['"])(https?:\/\/[^'"]+)\1|https?:\/\/[^\s]+/);
+    if (!urlMatch) {
+      console.error('No URL found in curl command');
+      return null;
     }
     
-    // Extract body
-    let body: any = undefined;
-    const dataMatch = cleaned.match(/(?:-d|--data(?:-raw)?)\s+['"](.+?)['"]/s);
-    if (dataMatch) {
-      try {
-        body = JSON.parse(dataMatch[1]);
-      } catch {
-        body = dataMatch[1];
+    const url = (urlMatch[2] || urlMatch[0]).replace(/['"]/g, '').trim();
+    
+    // Extract method
+    const methodMatch = cleaned.match(/-X\s+['"]?(\w+)['"]?/i);
+    const method = methodMatch ? methodMatch[1].toUpperCase() : 'GET';
+    
+    // Extract headers - handle various formats
+    const headers: Record<string, string> = {};
+    const headerRegex = /-H\s+(['"])([^'"]+)\1/gi;
+    let headerMatch;
+    while ((headerMatch = headerRegex.exec(cleaned)) !== null) {
+      const headerContent = headerMatch[2];
+      const colonIndex = headerContent.indexOf(':');
+      if (colonIndex > -1) {
+        const key = headerContent.substring(0, colonIndex).trim();
+        const value = headerContent.substring(colonIndex + 1).trim();
+        headers[key] = value;
       }
     }
     
+    // Extract body - handle -d, --data, --data-raw
+    let body: any = undefined;
+    const dataMatch = cleaned.match(/(?:-d|--data(?:-raw|-binary)?)\s+(['"])(.+?)\1/s);
+    if (dataMatch) {
+      const bodyContent = dataMatch[2];
+      try {
+        // Try to parse as JSON
+        body = JSON.parse(bodyContent);
+      } catch {
+        // If not JSON, keep as string
+        body = bodyContent;
+      }
+    }
+    
+    console.log('Parsed curl command:', { method, url, headers, body });
     return { method, url, headers, body };
   } catch (error) {
     console.error('Error parsing curl command:', error);
