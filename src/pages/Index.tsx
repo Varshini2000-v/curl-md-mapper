@@ -107,16 +107,12 @@ const Index = () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Filter only dynamic fields
-    const dynamicFields = fields.filter((f) => f.type === 'dynamic');
+    // Filter only changeable fields
+    const changeableFields = fields.filter((f) => f.isChangeable);
 
     // Build mappings object
     const mappings: Record<string, any> = {};
-    dynamicFields.forEach((field) => {
-      const sourceFile = field.mappedTo?.apiName 
-        ? files.find(f => f.name === field.mappedTo?.apiName)
-        : null;
-      
+    changeableFields.forEach((field) => {
       mappings[field.name] = {
         type: 'dynamic',
         source: field.mappedTo?.apiName || 'static',
@@ -128,7 +124,7 @@ const Index = () => {
       status: 200,
       statusText: 'OK',
       data: {
-        apiName: dynamicFields[0]?.mappedTo?.apiName || 'API',
+        apiName: changeableFields[0]?.mappedTo?.apiName || 'API',
         endpoint: '/api/endpoint',
         headers: {
           'Content-Type': 'application/json',
