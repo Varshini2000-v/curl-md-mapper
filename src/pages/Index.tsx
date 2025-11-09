@@ -92,13 +92,31 @@ const Index = () => {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
+    // Filter only dynamic fields
+    const dynamicFields = fields.filter((f) => f.type === 'dynamic');
+
+    // Build mappings object
+    const mappings: Record<string, any> = {};
+    dynamicFields.forEach((field) => {
+      mappings[field.name] = {
+        type: 'dynamic',
+        source: field.mappedTo?.apiName 
+          ? `${field.mappedTo.apiName}/${selectedFile ? files.find(f => f.id === selectedFile)?.name || 'source' : 'source'}`
+          : selectedFile ? files.find(f => f.id === selectedFile)?.name || 'source' : 'source',
+        field: field.mappedTo?.fieldName || field.name,
+      };
+    });
+
     const mockResponse: ApiResponse = {
       status: 200,
       statusText: 'OK',
       data: {
-        success: true,
-        message: 'API call executed successfully',
-        fields: fields.map((f) => ({ [f.name]: f.value })),
+        apiName: dynamicFields[0]?.mappedTo?.apiName || 'API',
+        endpoint: '/api/endpoint',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        mappings,
       },
       headers: {
         'content-type': 'application/json',
