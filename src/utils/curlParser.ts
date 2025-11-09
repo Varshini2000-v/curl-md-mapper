@@ -60,17 +60,7 @@ export function parseCurlCommand(curlString: string): CurlCommand | null {
 export function extractFields(curlCommand: CurlCommand): ParsedField[] {
   const fields: ParsedField[] = [];
   
-  // Extract fields from headers
-  Object.entries(curlCommand.headers).forEach(([name, value]) => {
-    fields.push({
-      name: `header.${name}`,
-      value: value,
-      type: 'string',
-      isChangeable: false,
-    });
-  });
-  
-  // Extract fields from body
+  // Extract fields from body only (skip headers)
   if (curlCommand.body && typeof curlCommand.body === 'object') {
     extractFieldsFromObject(curlCommand.body, 'body', fields);
   }
