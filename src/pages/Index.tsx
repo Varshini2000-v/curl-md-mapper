@@ -15,23 +15,33 @@ const Index = () => {
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fields, setFields] = useState<ParsedField[]>([]);
+  const [sourceFieldsMap, setSourceFieldsMap] = useState<Record<string, ParsedField[]>>({});
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleFilesUpload = async (uploadedFiles: File[]) => {
     const newFiles: UploadedFile[] = [];
+    const newSourceFields: Record<string, ParsedField[]> = { ...sourceFieldsMap };
 
     for (const file of uploadedFiles) {
       const content = await file.text();
+      const fileId = crypto.randomUUID();
       newFiles.push({
-        id: crypto.randomUUID(),
+        id: fileId,
         name: file.name,
         content,
       });
+
+      // Parse the file content to extract fields for source mapping
+      const parsed = parseCurlCommand(content);
+      if (parsed) {
+        newSourceFields[fileId] = extractFields(parsed);
+      }
     }
 
     setFiles((prev) => [...prev, ...newFiles]);
+    setSourceFieldsMap(newSourceFields);
     toast({
       title: 'Files uploaded',
       description: `${uploadedFiles.length} file(s) uploaded successfully`,
@@ -40,6 +50,11 @@ const Index = () => {
 
   const handleDeleteFile = (fileId: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
+    setSourceFieldsMap((prev) => {
+      const updated = { ...prev };
+      delete updated[fileId];
+      return updated;
+    });
     if (selectedFile === fileId) {
       setSelectedFile(null);
       setFields([]);
@@ -98,11 +113,13 @@ const Index = () => {
     // Build mappings object
     const mappings: Record<string, any> = {};
     dynamicFields.forEach((field) => {
+      const sourceFile = field.mappedTo?.apiName 
+        ? files.find(f => f.name === field.mappedTo?.apiName)
+        : null;
+      
       mappings[field.name] = {
         type: 'dynamic',
-        source: field.mappedTo?.apiName 
-          ? `${field.mappedTo.apiName}/${selectedFile ? files.find(f => f.id === selectedFile)?.name || 'source' : 'source'}`
-          : selectedFile ? files.find(f => f.id === selectedFile)?.name || 'source' : 'source',
+        source: field.mappedTo?.apiName || 'static',
         field: field.mappedTo?.fieldName || field.name,
       };
     });
@@ -181,7 +198,12 @@ const Index = () => {
               </Button>
             </div>
 
-            <FieldsTable fields={fields} onFieldChange={handleFieldChange} />
+            <FieldsTable 
+              fields={fields} 
+              onFieldChange={handleFieldChange}
+              sourceFiles={files}
+              sourceFieldsMap={sourceFieldsMap}
+            />
           </div>
 
           <div className="space-y-4">

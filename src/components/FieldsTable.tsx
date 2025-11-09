@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ParsedField } from '@/types/api';
+import { ParsedField, UploadedFile } from '@/types/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,26 +14,23 @@ import { Badge } from '@/components/ui/badge';
 interface FieldsTableProps {
   fields: ParsedField[];
   onFieldChange: (index: number, field: ParsedField) => void;
+  sourceFiles: UploadedFile[];
+  sourceFieldsMap: Record<string, ParsedField[]>;
 }
 
-const MOCK_APIS = [
-  { name: 'accountDetailsApi', fields: ['accountId', 'accountName', 'balance'] },
-  { name: 'userApi', fields: ['userId', 'username', 'email'] },
-  { name: 'orderApi', fields: ['orderId', 'total', 'status'] },
-];
-
-export function FieldsTable({ fields, onFieldChange }: FieldsTableProps) {
-  const [selectedApi, setSelectedApi] = useState<Record<number, string>>({});
+export function FieldsTable({ fields, onFieldChange, sourceFiles, sourceFieldsMap }: FieldsTableProps) {
+  const [selectedSource, setSelectedSource] = useState<Record<number, string>>({});
 
   const handleChangeableToggle = (index: number, checked: boolean) => {
     onFieldChange(index, { ...fields[index], isChangeable: checked });
   };
 
-  const handleApiSelect = (index: number, apiName: string) => {
-    setSelectedApi((prev) => ({ ...prev, [index]: apiName }));
+  const handleSourceSelect = (index: number, sourceFileId: string) => {
+    setSelectedSource((prev) => ({ ...prev, [index]: sourceFileId }));
+    const sourceFile = sourceFiles.find(f => f.id === sourceFileId);
     onFieldChange(index, {
       ...fields[index],
-      mappedTo: { apiName, fieldName: '' },
+      mappedTo: { apiName: sourceFile?.name || sourceFileId, fieldName: '' },
     });
   };
 
@@ -65,13 +62,14 @@ export function FieldsTable({ fields, onFieldChange }: FieldsTableProps) {
               <th className="px-4 py-3 text-left text-sm font-medium">Value</th>
               <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
               <th className="px-4 py-3 text-center text-sm font-medium">Changeable</th>
-              <th className="px-4 py-3 text-left text-sm font-medium">Map to API</th>
-              <th className="px-4 py-3 text-left text-sm font-medium">Field</th>
+              <th className="px-4 py-3 text-left text-sm font-medium">Source</th>
+              <th className="px-4 py-3 text-left text-sm font-medium">Field Name</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {fields.map((field, index) => {
-              const api = MOCK_APIS.find((a) => a.name === selectedApi[index]);
+              const sourceFileId = selectedSource[index];
+              const sourceFields = sourceFileId ? sourceFieldsMap[sourceFileId] || [] : [];
               
               return (
                 <tr key={index} className="hover:bg-muted/50 transition-colors">
@@ -103,16 +101,16 @@ export function FieldsTable({ fields, onFieldChange }: FieldsTableProps) {
                   </td>
                   <td className="px-4 py-3">
                     <Select
-                      value={selectedApi[index] || ''}
-                      onValueChange={(value) => handleApiSelect(index, value)}
+                      value={selectedSource[index] || ''}
+                      onValueChange={(value) => handleSourceSelect(index, value)}
                     >
                       <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Select API" />
+                        <SelectValue placeholder="Select Source" />
                       </SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        {MOCK_APIS.map((api) => (
-                          <SelectItem key={api.name} value={api.name}>
-                            {api.name}
+                      <SelectContent className="bg-popover border-border z-50">
+                        {sourceFiles.map((file) => (
+                          <SelectItem key={file.id} value={file.id}>
+                            {file.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -122,15 +120,15 @@ export function FieldsTable({ fields, onFieldChange }: FieldsTableProps) {
                     <Select
                       value={field.mappedTo?.fieldName || ''}
                       onValueChange={(value) => handleFieldSelect(index, value)}
-                      disabled={!selectedApi[index]}
+                      disabled={!selectedSource[index]}
                     >
                       <SelectTrigger className="h-8 text-sm">
                         <SelectValue placeholder="Select Field" />
                       </SelectTrigger>
-                      <SelectContent className="bg-popover border-border">
-                        {api?.fields.map((f) => (
-                          <SelectItem key={f} value={f}>
-                            {f}
+                      <SelectContent className="bg-popover border-border z-50">
+                        {sourceFields.map((f) => (
+                          <SelectItem key={f.name} value={f.name}>
+                            {f.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
