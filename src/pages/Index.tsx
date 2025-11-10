@@ -65,9 +65,14 @@ const Index = () => {
     Object.entries(obj).forEach(([key, value]) => {
       const fieldName = prefix ? `${prefix}.${key}` : key;
       
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
+      if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
+        // Handle array of objects - extract fields from first object
+        extractFieldsFromJson(value[0], fieldName, fields);
+      } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+        // Handle nested objects
         extractFieldsFromJson(value, fieldName, fields);
-      } else {
+      } else if (!Array.isArray(value)) {
+        // Handle primitive values (skip empty arrays or arrays of primitives)
         fields.push({
           name: fieldName,
           value: String(value),
