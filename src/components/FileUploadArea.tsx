@@ -13,13 +13,13 @@ export function FileUploadArea({ onFilesUpload }: FileUploadAreaProps) {
     (e: React.DragEvent) => {
       e.preventDefault();
       const files = Array.from(e.dataTransfer.files).filter((f) =>
-        f.name.endsWith('.md')
+        f.name.endsWith('.md') || f.name.endsWith('.json')
       );
       
       if (files.length === 0) {
         toast({
           title: 'Invalid files',
-          description: 'Please upload .md files only',
+          description: 'Please upload .md or .json files only',
           variant: 'destructive',
         });
         return;
@@ -47,14 +47,14 @@ export function FileUploadArea({ onFilesUpload }: FileUploadAreaProps) {
       className="border-2 border-dashed border-border rounded-lg p-8 text-center hover:border-primary transition-colors bg-card"
     >
       <Upload className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-      <h3 className="text-lg font-medium mb-2">Upload Markdown Files</h3>
+      <h3 className="text-lg font-medium mb-2">Upload Files</h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Drag and drop .md files here, or click to browse
+        Drag and drop .md or .json files here, or click to browse
       </p>
       <input
         type="file"
         multiple
-        accept=".md"
+        accept=".md,.json"
         onChange={handleFileInput}
         className="hidden"
         id="file-upload"

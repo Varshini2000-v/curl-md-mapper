@@ -34,9 +34,22 @@ const Index = () => {
       });
 
       // Parse the file content to extract fields for source mapping
-      const parsed = parseCurlCommand(content);
-      if (parsed) {
-        newSourceFields[fileId] = extractFields(parsed);
+      if (file.name.endsWith('.json')) {
+        // Parse JSON file
+        try {
+          const jsonData = JSON.parse(content);
+          const fields: ParsedField[] = [];
+          extractFieldsFromJson(jsonData, '', fields);
+          newSourceFields[fileId] = fields;
+        } catch (error) {
+          console.error('Error parsing JSON file:', error);
+        }
+      } else {
+        // Parse as curl command
+        const parsed = parseCurlCommand(content);
+        if (parsed) {
+          newSourceFields[fileId] = extractFields(parsed);
+        }
       }
     }
 
@@ -45,6 +58,23 @@ const Index = () => {
     toast({
       title: 'Files uploaded',
       description: `${uploadedFiles.length} file(s) uploaded successfully`,
+    });
+  };
+
+  const extractFieldsFromJson = (obj: any, prefix: string, fields: ParsedField[]) => {
+    Object.entries(obj).forEach(([key, value]) => {
+      const fieldName = prefix ? `${prefix}.${key}` : key;
+      
+      if (value && typeof value === 'object' && !Array.isArray(value)) {
+        extractFieldsFromJson(value, fieldName, fields);
+      } else {
+        fields.push({
+          name: fieldName,
+          value: String(value),
+          type: typeof value,
+          isChangeable: false,
+        });
+      }
     });
   };
 
@@ -161,7 +191,7 @@ const Index = () => {
             API Tester
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Upload .md files or paste curl commands to test APIs
+            Upload .md or .json files or paste curl commands to test APIs
           </p>
         </header>
 
