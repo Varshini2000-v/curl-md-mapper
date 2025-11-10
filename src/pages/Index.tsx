@@ -66,8 +66,8 @@ const Index = () => {
       const fieldName = prefix ? `${prefix}.${key}` : key;
       
       if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
-        // Handle array of objects - extract fields from first object
-        extractFieldsFromJson(value[0], fieldName, fields);
+        // Handle array of objects - extract fields from first object without adding array key to prefix
+        extractFieldsFromJson(value[0], prefix, fields);
       } else if (value && typeof value === 'object' && !Array.isArray(value)) {
         // Handle nested objects
         extractFieldsFromJson(value, fieldName, fields);
