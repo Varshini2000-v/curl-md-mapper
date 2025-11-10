@@ -28,9 +28,10 @@ export function FieldsTable({ fields, onFieldChange, sourceFiles, sourceFieldsMa
   const handleSourceSelect = (index: number, sourceFileId: string) => {
     setSelectedSource((prev) => ({ ...prev, [index]: sourceFileId }));
     const sourceFile = sourceFiles.find(f => f.id === sourceFileId);
+    const fileNameWithoutExt = sourceFile?.name.replace(/\.(md|json)$/i, '') || sourceFileId;
     onFieldChange(index, {
       ...fields[index],
-      mappedTo: { apiName: sourceFile?.name || sourceFileId, fieldName: '' },
+      mappedTo: { apiName: fileNameWithoutExt, fieldName: '' },
     });
   };
 
@@ -110,7 +111,7 @@ export function FieldsTable({ fields, onFieldChange, sourceFiles, sourceFieldsMa
                       <SelectContent className="bg-popover border-border z-50">
                         {sourceFiles.map((file) => (
                           <SelectItem key={file.id} value={file.id}>
-                            {file.name}
+                            {file.name.replace(/\.(md|json)$/i, '')}
                           </SelectItem>
                         ))}
                       </SelectContent>
