@@ -71,13 +71,24 @@ export function extractFields(curlCommand: CurlCommand): ParsedField[] {
 function extractFieldsFromObject(
   obj: any,
   prefix: string,
-  fields: ParsedField[]
+  fields: ParsedField[],
+  isArrayElement = false
 ): void {
+  if (Array.isArray(obj)) {
+    // Handle arrays - extract from first element only
+    if (obj.length > 0 && typeof obj[0] === 'object') {
+      extractFieldsFromObject(obj[0], `${prefix}[0]`, fields, true);
+    }
+    return;
+  }
+
   Object.entries(obj).forEach(([key, value]) => {
-    const fieldName = `${prefix}.${key}`;
+    const fieldName = isArrayElement ? `${prefix}.${key}` : `${prefix}.${key}`;
     
     if (value && typeof value === 'object' && !Array.isArray(value)) {
-      extractFieldsFromObject(value, fieldName, fields);
+      extractFieldsFromObject(value, fieldName, fields, false);
+    } else if (Array.isArray(value)) {
+      extractFieldsFromObject(value, fieldName, fields, false);
     } else {
       fields.push({
         name: fieldName,
