@@ -7,13 +7,17 @@ import { FileUploadArea } from '@/components/FileUploadArea';
 import { CurlPasteArea } from '@/components/CurlPasteArea';
 import { FieldsTable } from '@/components/FieldsTable';
 import { ResponseDisplay } from '@/components/ResponseDisplay';
+import { FileRepositorySelector } from '@/components/FileRepositorySelector';
 import { UploadedFile, ParsedField, ApiResponse } from '@/types/api';
 import { parseCurlCommand, extractFields } from '@/utils/curlParser';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { useFileContext } from '@/contexts/FileContext';
 
 export default function CreateTestScenario() {
   const navigate = useNavigate();
+  const { repositoryFiles } = useFileContext();
+  const [selectedRepositoryFileIds, setSelectedRepositoryFileIds] = useState<string[]>([]);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [fields, setFields] = useState<ParsedField[]>([]);
@@ -205,6 +209,14 @@ export default function CreateTestScenario() {
         />
 
         <div className="flex-1 overflow-auto p-6 space-y-6">
+          <div className="max-w-md">
+            <FileRepositorySelector
+              files={repositoryFiles}
+              selectedFileIds={selectedRepositoryFileIds}
+              onSelectionChange={setSelectedRepositoryFileIds}
+            />
+          </div>
+
           <Tabs defaultValue="upload" className="w-full">
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="upload">Upload Files</TabsTrigger>

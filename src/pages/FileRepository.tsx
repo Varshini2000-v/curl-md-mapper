@@ -5,16 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileUploadArea } from '@/components/FileUploadArea';
 import { useToast } from '@/hooks/use-toast';
-import { UploadedFile } from '@/types/api';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useFileContext } from '@/contexts/FileContext';
 
 export default function FileRepository() {
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [viewingFile, setViewingFile] = useState<UploadedFile | null>(null);
+  const [viewingFile, setViewingFile] = useState<any>(null);
+  const { repositoryFiles, addRepositoryFiles, deleteRepositoryFile } = useFileContext();
   const { toast } = useToast();
 
   const handleFilesUpload = async (uploadedFiles: File[]) => {
-    const newFiles: UploadedFile[] = [];
+    const newFiles = [];
 
     for (const file of uploadedFiles) {
       const content = await file.text();
@@ -26,7 +26,7 @@ export default function FileRepository() {
       });
     }
 
-    setFiles((prev) => [...prev, ...newFiles]);
+    addRepositoryFiles(newFiles);
     toast({
       title: 'Files uploaded',
       description: `${uploadedFiles.length} file(s) uploaded successfully`,
@@ -34,14 +34,14 @@ export default function FileRepository() {
   };
 
   const handleDeleteFile = (fileId: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== fileId));
+    deleteRepositoryFile(fileId);
     toast({
       title: 'File deleted',
       description: 'File removed successfully',
     });
   };
 
-  const handleViewFile = (file: UploadedFile) => {
+  const handleViewFile = (file: any) => {
     setViewingFile(file);
   };
 
@@ -63,18 +63,18 @@ export default function FileRepository() {
           <CardHeader>
             <CardTitle>Uploaded Files</CardTitle>
             <CardDescription>
-              {files.length} file{files.length !== 1 ? 's' : ''} in repository
+              {repositoryFiles.length} file{repositoryFiles.length !== 1 ? 's' : ''} in repository
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[400px]">
-              {files.length === 0 ? (
+              {repositoryFiles.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground">
                   No files uploaded yet
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {files.map((file) => (
+                  {repositoryFiles.map((file) => (
                     <div
                       key={file.id}
                       className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
