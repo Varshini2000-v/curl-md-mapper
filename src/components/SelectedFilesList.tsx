@@ -21,7 +21,7 @@ export function SelectedFilesList({ files, onReorder, onDelete, onSelect }: Sele
     setDraggedIndex(index);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, index: number) => {
     e.preventDefault();
   };
 
@@ -36,7 +36,6 @@ export function SelectedFilesList({ files, onReorder, onDelete, onSelect }: Sele
 
     const newOrder = newFiles.map(f => f.id);
     onReorder(newOrder);
-    setDraggedIndex(null);
   };
 
   const handleDragEnd = () => {
@@ -70,10 +69,10 @@ export function SelectedFilesList({ files, onReorder, onDelete, onSelect }: Sele
             key={file.id}
             draggable
             onDragStart={() => handleDragStart(index)}
-            onDragOver={handleDragOver}
+            onDragOver={(e) => handleDragOver(e, index)}
             onDrop={(e) => handleDrop(e, index)}
             onDragEnd={handleDragEnd}
-            className="p-4 flex items-center gap-3 cursor-move hover:bg-accent/50 transition-colors"
+            className={`p-4 flex items-center gap-3 cursor-move hover:bg-accent/50 transition-colors ${draggedIndex === index ? 'opacity-50' : ''}`}
           >
             <GripVertical className="h-5 w-5 text-muted-foreground" />
             <span 
