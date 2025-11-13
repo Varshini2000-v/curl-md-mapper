@@ -22,6 +22,7 @@ export default function CreateTestScenario() {
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [mappers, setMappers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiInfo, setApiInfo] = useState<{ apiUrl: string; apiName: string } | null>(null);
   const { toast } = useToast();
 
   const selectedCurlFiles = repositoryFiles.filter(f => selectedCurlFileIds.includes(f.id));
@@ -40,24 +41,69 @@ export default function CreateTestScenario() {
   const handleSelectCurlFile = (fileId: string) => {
     const file = repositoryFiles.find(f => f.id === fileId);
     if (file) {
-      const parsed = parseCurlCommand(file.content);
-      if (parsed) {
-        const extractedFields = extractFields(parsed);
-        setFields(extractedFields);
+      // Handle .md files differently
+      if (file.name.endsWith('.md')) {
+        // Extract apiUrl and apiName from markdown file
+        const lines = file.content.split('\n');
+        let apiUrl = '';
+        let apiName = '';
         
-        // Extract fields from JSON files for mapping
-        const newSourceFields: Record<string, ParsedField[]> = {};
-        selectedJsonFiles.forEach(jsonFile => {
-          try {
-            const jsonData = JSON.parse(jsonFile.content);
-            const fields: ParsedField[] = [];
-            extractFieldsFromJson(jsonData, '', fields);
-            newSourceFields[jsonFile.id] = fields;
-          } catch (error) {
-            console.error('Error parsing JSON file:', error);
+        lines.forEach(line => {
+          if (line.toLowerCase().includes('api url:') || line.toLowerCase().includes('apiurl:')) {
+            apiUrl = line.split(':').slice(1).join(':').trim();
+          }
+          if (line.toLowerCase().includes('api name:') || line.toLowerCase().includes('apiname:')) {
+            apiName = line.split(':').slice(1).join(':').trim();
           }
         });
-        setSourceFieldsMap(newSourceFields);
+        
+        setApiInfo({ apiUrl, apiName });
+        
+        // Extract curl command from markdown
+        const curlMatch = file.content.match(/```(?:bash|sh)?\s*(curl\s+[^`]+)```/i);
+        if (curlMatch) {
+          const parsed = parseCurlCommand(curlMatch[1]);
+          if (parsed) {
+            const extractedFields = extractFields(parsed);
+            setFields(extractedFields);
+            
+            // Extract fields from JSON files for mapping
+            const newSourceFields: Record<string, ParsedField[]> = {};
+            selectedJsonFiles.forEach(jsonFile => {
+              try {
+                const jsonData = JSON.parse(jsonFile.content);
+                const fields: ParsedField[] = [];
+                extractFieldsFromJson(jsonData, '', fields);
+                newSourceFields[jsonFile.id] = fields;
+              } catch (error) {
+                console.error('Error parsing JSON file:', error);
+              }
+            });
+            setSourceFieldsMap(newSourceFields);
+          }
+        }
+      } else {
+        // Handle regular curl files
+        setApiInfo(null);
+        const parsed = parseCurlCommand(file.content);
+        if (parsed) {
+          const extractedFields = extractFields(parsed);
+          setFields(extractedFields);
+          
+          // Extract fields from JSON files for mapping
+          const newSourceFields: Record<string, ParsedField[]> = {};
+          selectedJsonFiles.forEach(jsonFile => {
+            try {
+              const jsonData = JSON.parse(jsonFile.content);
+              const fields: ParsedField[] = [];
+              extractFieldsFromJson(jsonData, '', fields);
+              newSourceFields[jsonFile.id] = fields;
+            } catch (error) {
+              console.error('Error parsing JSON file:', error);
+            }
+          });
+          setSourceFieldsMap(newSourceFields);
+        }
       }
     }
   };
@@ -222,6 +268,19 @@ export default function CreateTestScenario() {
                 Run API Call
               </Button>
             </div>
+
+            {apiInfo && (
+              <div className="p-4 bg-muted rounded-md space-y-2">
+                <div className="flex gap-2">
+                  <span className="font-semibold">API URL:</span>
+                  <code className="text-sm">{apiInfo.apiUrl}</code>
+                </div>
+                <div className="flex gap-2">
+                  <span className="font-semibold">API Name:</span>
+                  <code className="text-sm">{apiInfo.apiName}</code>
+                </div>
+              </div>
+            )}
 
             <FieldsTable 
               fields={fields} 

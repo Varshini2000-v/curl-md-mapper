@@ -21,18 +21,22 @@ export function SelectedFilesList({ files, onReorder, onDelete, onSelect }: Sele
     setDraggedIndex(index);
   };
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    if (draggedIndex === null || draggedIndex === index) return;
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === dropIndex) return;
 
     const newFiles = [...files];
     const draggedFile = newFiles[draggedIndex];
     newFiles.splice(draggedIndex, 1);
-    newFiles.splice(index, 0, draggedFile);
+    newFiles.splice(dropIndex, 0, draggedFile);
 
     const newOrder = newFiles.map(f => f.id);
     onReorder(newOrder);
-    setDraggedIndex(index);
+    setDraggedIndex(null);
   };
 
   const handleDragEnd = () => {
@@ -66,7 +70,8 @@ export function SelectedFilesList({ files, onReorder, onDelete, onSelect }: Sele
             key={file.id}
             draggable
             onDragStart={() => handleDragStart(index)}
-            onDragOver={(e) => handleDragOver(e, index)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, index)}
             onDragEnd={handleDragEnd}
             className="p-4 flex items-center gap-3 cursor-move hover:bg-accent/50 transition-colors"
           >
