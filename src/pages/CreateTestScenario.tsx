@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Play, ArrowLeft } from 'lucide-react';
-import { FileSidebar } from '@/components/FileSidebar';
-import { FileUploadArea } from '@/components/FileUploadArea';
-import { CurlPasteArea } from '@/components/CurlPasteArea';
+import { Play, ArrowLeft, Save } from 'lucide-react';
+import { SelectedFilesList } from '@/components/SelectedFilesList';
 import { FieldsTable } from '@/components/FieldsTable';
 import { ResponseDisplay } from '@/components/ResponseDisplay';
 import { FileRepositorySelector } from '@/components/FileRepositorySelector';
+import { MapperWidget } from '@/components/MapperWidget';
 import { UploadedFile, ParsedField, ApiResponse } from '@/types/api';
 import { parseCurlCommand, extractFields } from '@/utils/curlParser';
 import { useToast } from '@/hooks/use-toast';
@@ -17,51 +15,51 @@ import { useFileContext } from '@/contexts/FileContext';
 export default function CreateTestScenario() {
   const navigate = useNavigate();
   const { repositoryFiles } = useFileContext();
-  const [selectedRepositoryFileIds, setSelectedRepositoryFileIds] = useState<string[]>([]);
-  const [files, setFiles] = useState<UploadedFile[]>([]);
-  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [selectedCurlFileIds, setSelectedCurlFileIds] = useState<string[]>([]);
+  const [selectedJsonFileIds, setSelectedJsonFileIds] = useState<string[]>([]);
   const [fields, setFields] = useState<ParsedField[]>([]);
   const [sourceFieldsMap, setSourceFieldsMap] = useState<Record<string, ParsedField[]>>({});
   const [response, setResponse] = useState<ApiResponse | null>(null);
+  const [mappers, setMappers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleFilesUpload = async (uploadedFiles: File[]) => {
-    const newFiles: UploadedFile[] = [];
-    const newSourceFields: Record<string, ParsedField[]> = { ...sourceFieldsMap };
+  const selectedCurlFiles = repositoryFiles.filter(f => selectedCurlFileIds.includes(f.id));
+  const selectedJsonFiles = repositoryFiles.filter(f => selectedJsonFileIds.includes(f.id));
+  const curlFiles = repositoryFiles.filter(f => !f.name.endsWith('.json'));
+  const jsonFiles = repositoryFiles.filter(f => f.name.endsWith('.json'));
 
-    for (const file of uploadedFiles) {
-      const content = await file.text();
-      const fileId = crypto.randomUUID();
-      newFiles.push({
-        id: fileId,
-        name: file.name,
-        content,
-      });
+  const handleReorderCurlFiles = (newOrder: string[]) => {
+    setSelectedCurlFileIds(newOrder);
+  };
 
-      if (file.name.endsWith('.json')) {
-        try {
-          const jsonData = JSON.parse(content);
-          const fields: ParsedField[] = [];
-          extractFieldsFromJson(jsonData, '', fields);
-          newSourceFields[fileId] = fields;
-        } catch (error) {
-          console.error('Error parsing JSON file:', error);
-        }
-      } else {
-        const parsed = parseCurlCommand(content);
-        if (parsed) {
-          newSourceFields[fileId] = extractFields(parsed);
-        }
+  const handleDeleteCurlFile = (fileId: string) => {
+    setSelectedCurlFileIds(prev => prev.filter(id => id !== fileId));
+  };
+
+  const handleSelectCurlFile = (fileId: string) => {
+    const file = repositoryFiles.find(f => f.id === fileId);
+    if (file) {
+      const parsed = parseCurlCommand(file.content);
+      if (parsed) {
+        const extractedFields = extractFields(parsed);
+        setFields(extractedFields);
+        
+        // Extract fields from JSON files for mapping
+        const newSourceFields: Record<string, ParsedField[]> = {};
+        selectedJsonFiles.forEach(jsonFile => {
+          try {
+            const jsonData = JSON.parse(jsonFile.content);
+            const fields: ParsedField[] = [];
+            extractFieldsFromJson(jsonData, '', fields);
+            newSourceFields[jsonFile.id] = fields;
+          } catch (error) {
+            console.error('Error parsing JSON file:', error);
+          }
+        });
+        setSourceFieldsMap(newSourceFields);
       }
     }
-
-    setFiles((prev) => [...prev, ...newFiles]);
-    setSourceFieldsMap(newSourceFields);
-    toast({
-      title: 'Files uploaded',
-      description: `${uploadedFiles.length} file(s) uploaded successfully`,
-    });
   };
 
   const extractFieldsFromJson = (obj: any, prefix: string, fields: ParsedField[]) => {
@@ -83,48 +81,6 @@ export default function CreateTestScenario() {
     });
   };
 
-  const handleDeleteFile = (fileId: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== fileId));
-    setSourceFieldsMap((prev) => {
-      const updated = { ...prev };
-      delete updated[fileId];
-      return updated;
-    });
-    if (selectedFile === fileId) {
-      setSelectedFile(null);
-      setFields([]);
-    }
-  };
-
-  const handleSelectFile = (fileId: string) => {
-    setSelectedFile(fileId);
-    const file = files.find((f) => f.id === fileId);
-    if (file) {
-      const parsed = parseCurlCommand(file.content);
-      if (parsed) {
-        const extractedFields = extractFields(parsed);
-        setFields(extractedFields);
-      }
-    }
-  };
-
-  const handleCurlParse = (curlText: string) => {
-    const parsed = parseCurlCommand(curlText);
-    if (parsed) {
-      const extractedFields = extractFields(parsed);
-      setFields(extractedFields);
-      toast({
-        title: 'Curl command parsed',
-        description: `Extracted ${extractedFields.length} fields`,
-      });
-    } else {
-      toast({
-        title: 'Parse error',
-        description: 'Could not parse the curl command',
-        variant: 'destructive',
-      });
-    }
-  };
 
   const handleFieldChange = (index: number, field: ParsedField) => {
     setFields((prev) => {
@@ -169,12 +125,41 @@ export default function CreateTestScenario() {
     };
 
     setResponse(mockResponse);
+    
+    // Generate mapper objects
+    const generatedMappers = selectedCurlFiles.map(curlFile => ({
+      id: crypto.randomUUID(),
+      curlFile: curlFile.name,
+      mappings,
+      createdAt: new Date().toISOString(),
+    }));
+    setMappers(generatedMappers);
+    
     setIsLoading(false);
 
     toast({
       title: 'API executed',
       description: 'Request completed successfully',
     });
+  };
+
+  const handleSave = async () => {
+    const payload = {
+      curlFiles: selectedCurlFiles.map(f => ({ id: f.id, name: f.name, content: f.content })),
+      jsonFiles: selectedJsonFiles.map(f => ({ id: f.id, name: f.name, content: f.content })),
+      fields,
+      mappers,
+    };
+
+    console.log('Saving test scenario:', payload);
+    
+    toast({
+      title: 'Test scenario saved',
+      description: 'Your test scenario has been saved successfully',
+    });
+
+    // Here you would call your API
+    // await fetch('/api/test-scenarios', { method: 'POST', body: JSON.stringify(payload) });
   };
 
   return (
@@ -200,38 +185,31 @@ export default function CreateTestScenario() {
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        <FileSidebar
-          files={files}
-          selectedFile={selectedFile}
-          onSelectFile={handleSelectFile}
-          onDeleteFile={handleDeleteFile}
+      <div className="flex-1 overflow-auto p-6 space-y-6">
+        <div className="grid grid-cols-2 gap-6">
+          <FileRepositorySelector
+            files={curlFiles}
+            selectedFileIds={selectedCurlFileIds}
+            onSelectionChange={setSelectedCurlFileIds}
+            label="CURL Files"
+          />
+          
+          <FileRepositorySelector
+            files={jsonFiles}
+            selectedFileIds={selectedJsonFileIds}
+            onSelectionChange={setSelectedJsonFileIds}
+            label="JSON Files"
+          />
+        </div>
+
+        <SelectedFilesList
+          files={selectedCurlFiles}
+          onReorder={handleReorderCurlFiles}
+          onDelete={handleDeleteCurlFile}
+          onSelect={handleSelectCurlFile}
         />
 
-        <div className="flex-1 overflow-auto p-6 space-y-6">
-          <div className="max-w-md">
-            <FileRepositorySelector
-              files={repositoryFiles}
-              selectedFileIds={selectedRepositoryFileIds}
-              onSelectionChange={setSelectedRepositoryFileIds}
-            />
-          </div>
-
-          <Tabs defaultValue="upload" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-2">
-              <TabsTrigger value="upload">Upload Files</TabsTrigger>
-              <TabsTrigger value="curl">Paste Curl</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="upload" className="mt-4">
-              <FileUploadArea onFilesUpload={handleFilesUpload} />
-            </TabsContent>
-
-            <TabsContent value="curl" className="mt-4">
-              <CurlPasteArea onParse={handleCurlParse} />
-            </TabsContent>
-          </Tabs>
-
+        {fields.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold">Extracted Fields</h2>
@@ -248,16 +226,29 @@ export default function CreateTestScenario() {
             <FieldsTable 
               fields={fields} 
               onFieldChange={handleFieldChange}
-              sourceFiles={files}
+              sourceFiles={selectedJsonFiles}
               sourceFieldsMap={sourceFieldsMap}
             />
           </div>
+        )}
 
+        {response && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Response</h2>
             <ResponseDisplay response={response} isLoading={isLoading} />
           </div>
-        </div>
+        )}
+
+        {mappers.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Generated Mappers</h2>
+            <MapperWidget mappers={mappers} />
+            <Button onClick={handleSave} className="w-full">
+              <Save className="h-4 w-4 mr-2" />
+              Save Test Scenario
+            </Button>
+          </div>
+        )}
       </div>
     </>
   );

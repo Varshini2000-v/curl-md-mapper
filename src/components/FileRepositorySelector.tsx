@@ -11,12 +11,14 @@ interface FileRepositorySelectorProps {
   files: UploadedFile[];
   selectedFileIds: string[];
   onSelectionChange: (fileIds: string[]) => void;
+  label?: string;
 }
 
 export function FileRepositorySelector({ 
   files, 
   selectedFileIds, 
-  onSelectionChange 
+  onSelectionChange,
+  label = "Files"
 }: FileRepositorySelectorProps) {
   const [open, setOpen] = useState(false);
 
@@ -29,7 +31,7 @@ export function FileRepositorySelector({
 
   return (
     <div className="space-y-2">
-      <Label>Files</Label>
+      <Label>{label}</Label>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
