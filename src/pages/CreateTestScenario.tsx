@@ -38,6 +38,27 @@ export default function CreateTestScenario() {
     setSelectedCurlFileIds(prev => prev.filter(id => id !== fileId));
   };
 
+  const handleJsonFilesChange = (fileIds: string[]) => {
+    setSelectedJsonFileIds(fileIds);
+    
+    // Extract fields from all selected JSON files
+    const newSourceFields: Record<string, ParsedField[]> = {};
+    fileIds.forEach(fileId => {
+      const jsonFile = repositoryFiles.find(f => f.id === fileId);
+      if (jsonFile) {
+        try {
+          const jsonData = JSON.parse(jsonFile.content);
+          const fields: ParsedField[] = [];
+          extractFieldsFromJson(jsonData, '', fields);
+          newSourceFields[jsonFile.id] = fields;
+        } catch (error) {
+          console.error('Error parsing JSON file:', error);
+        }
+      }
+    });
+    setSourceFieldsMap(newSourceFields);
+  };
+
   const handleSelectCurlFile = (fileId: string) => {
     const file = repositoryFiles.find(f => f.id === fileId);
     if (file) {
@@ -172,14 +193,17 @@ export default function CreateTestScenario() {
 
     setResponse(mockResponse);
     
-    // Generate mapper objects
-    const generatedMappers = selectedCurlFiles.map(curlFile => ({
+    // Generate mapper object for the current API
+    const currentApiName = apiInfo?.apiName || selectedCurlFiles[0]?.name || 'API';
+    const newMapper = {
       id: crypto.randomUUID(),
-      curlFile: curlFile.name,
+      curlFile: currentApiName,
       mappings,
       createdAt: new Date().toISOString(),
-    }));
-    setMappers(generatedMappers);
+    };
+    
+    // Accumulate mappers instead of replacing
+    setMappers(prev => [...prev, newMapper]);
     
     setIsLoading(false);
 
@@ -243,7 +267,7 @@ export default function CreateTestScenario() {
           <FileRepositorySelector
             files={jsonFiles}
             selectedFileIds={selectedJsonFileIds}
-            onSelectionChange={setSelectedJsonFileIds}
+            onSelectionChange={handleJsonFilesChange}
             label="JSON Files"
           />
         </div>
