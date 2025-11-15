@@ -86,7 +86,9 @@ export default function CreateTestScenario() {
           const parsed = parseCurlCommand(curlMatch[1]);
           if (parsed) {
             const extractedFields = extractFields(parsed);
-            setFields(extractedFields);
+            // Clear any previous mappings when switching files
+            const clearedFields = extractedFields.map(f => ({ ...f, mappedTo: undefined }));
+            setFields(clearedFields);
             
             // Build sourceFieldsMap with both selected files
             const newSourceFields: Record<string, ParsedField[]> = { ...sourceFieldsMap };
@@ -115,7 +117,9 @@ export default function CreateTestScenario() {
         const parsed = parseCurlCommand(file.content);
         if (parsed) {
           const extractedFields = extractFields(parsed);
-          setFields(extractedFields);
+          // Clear any previous mappings when switching files
+          const clearedFields = extractedFields.map(f => ({ ...f, mappedTo: undefined }));
+          setFields(clearedFields);
           
           // Build sourceFieldsMap with both selected files
           const newSourceFields: Record<string, ParsedField[]> = { ...sourceFieldsMap };
@@ -175,14 +179,16 @@ export default function CreateTestScenario() {
 
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    const changeableFields = fields.filter((f) => f.isChangeable);
+    // Only include fields that have mappings set
+    const mappedFields = fields.filter((f) => f.isChangeable && f.mappedTo && f.mappedTo.fieldName);
 
     const mappings: Record<string, any> = {};
-    changeableFields.forEach((field) => {
+    mappedFields.forEach((field) => {
       mappings[field.name] = {
         type: 'dynamic',
         source: field.mappedTo?.apiName || 'static',
         field: field.mappedTo?.fieldName || field.name,
+        value: field.value,
       };
     });
 
@@ -190,8 +196,8 @@ export default function CreateTestScenario() {
       status: 200,
       statusText: 'OK',
       data: {
-        apiName: changeableFields[0]?.mappedTo?.apiName || 'API',
-        endpoint: '/api/endpoint',
+        apiName: apiInfo?.apiName || selectedCurlFiles[0]?.name || 'API',
+        endpoint: apiInfo?.apiUrl || '/api/endpoint',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -206,10 +212,11 @@ export default function CreateTestScenario() {
     setResponse(mockResponse);
     
     // Generate mapper object for the current API
-    const currentApiName = apiInfo?.apiName || selectedCurlFiles[0]?.name || 'API';
+    const currentApiName = apiInfo?.apiName || selectedCurlFiles[0]?.name.replace(/\.(md|txt)$/i, '') || 'API';
     const newMapper = {
       id: crypto.randomUUID(),
-      curlFile: currentApiName,
+      apiName: currentApiName,
+      apiUrl: apiInfo?.apiUrl || 'N/A',
       mappings,
       createdAt: new Date().toISOString(),
     };
@@ -221,7 +228,7 @@ export default function CreateTestScenario() {
 
     toast({
       title: 'API executed',
-      description: 'Request completed successfully',
+      description: `Mapper created for ${currentApiName}`,
     });
   };
 
