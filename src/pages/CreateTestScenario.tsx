@@ -88,8 +88,13 @@ export default function CreateTestScenario() {
             const extractedFields = extractFields(parsed);
             setFields(extractedFields);
             
-            // Extract fields from JSON files for mapping
-            const newSourceFields: Record<string, ParsedField[]> = {};
+            // Build sourceFieldsMap with both selected files
+            const newSourceFields: Record<string, ParsedField[]> = { ...sourceFieldsMap };
+            
+            // Add current MD file's extracted fields
+            newSourceFields[file.id] = extractedFields;
+            
+            // Add fields from all selected JSON files
             selectedJsonFiles.forEach(jsonFile => {
               try {
                 const jsonData = JSON.parse(jsonFile.content);
@@ -100,6 +105,7 @@ export default function CreateTestScenario() {
                 console.error('Error parsing JSON file:', error);
               }
             });
+            
             setSourceFieldsMap(newSourceFields);
           }
         }
@@ -111,8 +117,13 @@ export default function CreateTestScenario() {
           const extractedFields = extractFields(parsed);
           setFields(extractedFields);
           
-          // Extract fields from JSON files for mapping
-          const newSourceFields: Record<string, ParsedField[]> = {};
+          // Build sourceFieldsMap with both selected files
+          const newSourceFields: Record<string, ParsedField[]> = { ...sourceFieldsMap };
+          
+          // Add current curl file's extracted fields
+          newSourceFields[file.id] = extractedFields;
+          
+          // Add fields from all selected JSON files
           selectedJsonFiles.forEach(jsonFile => {
             try {
               const jsonData = JSON.parse(jsonFile.content);
@@ -123,6 +134,7 @@ export default function CreateTestScenario() {
               console.error('Error parsing JSON file:', error);
             }
           });
+          
           setSourceFieldsMap(newSourceFields);
         }
       }
@@ -309,7 +321,7 @@ export default function CreateTestScenario() {
             <FieldsTable 
               fields={fields} 
               onFieldChange={handleFieldChange}
-              sourceFiles={selectedJsonFiles}
+              sourceFiles={[...selectedCurlFiles, ...selectedJsonFiles]}
               sourceFieldsMap={sourceFieldsMap}
             />
           </div>
