@@ -12,7 +12,16 @@ export function MapperWidget({ mappers }: MapperWidgetProps) {
       {mappers.map((mapper) => (
         <Card key={mapper.id} className="p-4">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold">{mapper.curlFile}</h3>
+            <div>
+              <h3 className="font-semibold">
+                API: <code className="text-sm text-code-keyword">{mapper.apiName}</code>
+              </h3>
+              {mapper.apiUrl && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  URL: <code>{mapper.apiUrl}</code>
+                </p>
+              )}
+            </div>
             <Badge variant="secondary">
               {new Date(mapper.createdAt).toLocaleString()}
             </Badge>

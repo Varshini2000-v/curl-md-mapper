@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { ParsedField, UploadedFile } from '@/types/api';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,17 @@ interface FieldsTableProps {
 
 export function FieldsTable({ fields, onFieldChange, sourceFiles, sourceFieldsMap }: FieldsTableProps) {
   const [selectedSource, setSelectedSource] = useState<Record<number, string>>({});
+
+  // Clear selected sources when fields change (file switch)
+  const fieldNames = fields.map(f => f.name).join(',');
+  const prevFieldNames = React.useRef(fieldNames);
+  
+  React.useEffect(() => {
+    if (prevFieldNames.current !== fieldNames) {
+      setSelectedSource({});
+      prevFieldNames.current = fieldNames;
+    }
+  }, [fieldNames]);
 
   const handleChangeableToggle = (index: number, checked: boolean) => {
     onFieldChange(index, { ...fields[index], isChangeable: checked });
