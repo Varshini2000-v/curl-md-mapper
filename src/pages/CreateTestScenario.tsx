@@ -56,7 +56,9 @@ export default function CreateTestScenario() {
         }
       }
     });
-    setSourceFieldsMap(newSourceFields);
+    
+    // Preserve any existing curl/md file fields in sourceFieldsMap
+    setSourceFieldsMap(prev => ({ ...prev, ...newSourceFields }));
   };
 
   const handleSelectCurlFile = (fileId: string) => {
@@ -221,14 +223,25 @@ export default function CreateTestScenario() {
       createdAt: new Date().toISOString(),
     };
     
-    // Accumulate mappers instead of replacing
-    setMappers(prev => [...prev, newMapper]);
+    // Check if mapper already exists for this API and update it, otherwise add new
+    setMappers(prev => {
+      const existingIndex = prev.findIndex(m => m.apiName === currentApiName);
+      if (existingIndex !== -1) {
+        // Update existing mapper
+        const updated = [...prev];
+        updated[existingIndex] = { ...newMapper, id: prev[existingIndex].id };
+        return updated;
+      } else {
+        // Add new mapper
+        return [...prev, newMapper];
+      }
+    });
     
     setIsLoading(false);
 
     toast({
       title: 'API executed',
-      description: `Mapper created for ${currentApiName}`,
+      description: `Mapper ${mappers.some(m => m.apiName === currentApiName) ? 'updated' : 'created'} for ${currentApiName}`,
     });
   };
 
